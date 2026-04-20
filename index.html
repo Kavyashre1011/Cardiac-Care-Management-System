@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heart Hub – Complete Care with 200 Patients</title>
+  <!-- Chart.js and jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f4f6fa;
+      transition: background 0.3s, color 0.3s;
+      overflow-x: hidden;
+    }
+    body.dark { background: #111; color: #f0f0f0; }
+    body.dark .panel, body.dark .module-card { background: #1e1e1e; border-color: #333; color: #eee; }
+    body.dark input, body.dark select { background: #2a2a2a; color: #fff; border-color: #555; }
+
+    /* LOGIN PAGE */
+    #loginPage {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      background: linear-gradient(145deg, #ffe9ed, #f4f6fa); z-index: 2000; overflow: hidden;
+    }
+    .hearts-container {
+      position: absolute; width: 100%; height: 100%; pointer-events: none; overflow: hidden; top: 0; left: 0; z-index: 1;
+    }
+    .heart {
+      position: absolute; color: rgba(255, 80, 120, 0.6); font-size: 24px;
+      animation: floatUp 8s linear infinite; user-select: none;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(100vh) scale(0.8); opacity: 0.9; }
+      100% { transform: translateY(-10vh) scale(1.3); opacity: 0; }
+    }
+    .quote-banner {
+      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+      width: 90%; max-width: 1000px; background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px); padding: 20px 35px; border-radius: 80px;
+      box-shadow: 0 15px 30px rgba(190,30,60,0.2); border: 2px solid #ffb0c0;
+      text-align: center; z-index: 10; font-size: 26px; font-weight: 600;
+      color: #a52a5e; line-height: 1.4;
+    }
+    .quote-author { font-size: 16px; color: #8b3a4c; margin-top: 8px; font-style: italic; }
+    .login-card {
+      background: white; padding: 45px 40px; border-radius: 50px; width: 500px; max-width: 90%;
+      box-shadow: 0 30px 50px rgba(200,30,70,0.25); text-align: center; z-index: 15;
+      border: 2px solid #ffb6c1; margin-top: 140px;
+    }
+    .login-card h2 { color: #c2185b; font-size: 36px; margin-bottom: 25px; }
+    .login-card input {
+      width: 100%; padding: 15px 20px; margin: 12px 0; border-radius: 60px;
+      border: 2px solid #ffb0c0; background: #fff2f5; font-size: 16px; outline: none;
+    }
+    .login-card button {
+      width: 100%; padding: 16px; margin: 15px 0 10px; border: none; background: #ff2d55;
+      color: white; font-size: 20px; font-weight: bold; border-radius: 60px; cursor: pointer;
+      box-shadow: 0 8px 0 #b22234;
+    }
+    .login-card button:active { transform: translateY(5px); box-shadow: 0 3px 0 #b22234; }
+    .show-pw { display: flex; align-items: center; gap: 8px; font-size: 15px; color: #444; margin: 5px 0; }
+    #loginMsg { color: #d32f2f; min-height: 28px; font-weight: 500; }
+
+    /* MAIN DASHBOARD */
+    #app { display: none; height: 100vh; width: 100%; overflow: hidden; }
+    .container { display: flex; height: 100%; width: 100%; }
+    .sidebar {
+      width: 280px; background: #c2185b; color: white; padding: 30px 15px;
+      display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+      overflow-y: auto;
+    }
+    .sidebar h2 { font-size: 28px; margin-bottom: 30px; text-align: center; }
+    .sidebar button {
+      background: white; border: none; color: #c2185b; font-size: 16px; font-weight: 600;
+      padding: 12px; margin: 5px 0; border-radius: 40px; cursor: pointer; transition: 0.2s;
+      text-align: left;
+    }
+    .sidebar button:hover { background: #ffe2eb; transform: translateX(5px); }
+    .main { flex: 1; padding: 30px; overflow-y: auto; background: #f8fafd; }
+    body.dark .main { background: #1a1a1a; }
+    .panel { background: white; padding: 30px; border-radius: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 30px; }
+
+    /* MODULES GRID */
+    .modules-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-top: 25px;
+    }
+    .module-card {
+      background: white; border-radius: 24px; padding: 20px; box-shadow: 0 8px 20px rgba(200,30,70,0.1);
+      border: 1px solid #ffe2e8; transition: 0.3s;
+    }
+    .module-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(200,30,70,0.2); }
+    .module-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+      border-bottom: 2px solid #ffb6c1; padding-bottom: 10px;
+    }
+    .module-header h3 { color: #c2185b; font-size: 18px; }
+    .module-content { min-height: 100px; }
+
+    /* RISK BADGES */
+    .risk-badge {
+      display: inline-block; padding: 5px 15px; border-radius: 30px; font-weight: bold; color: white;
+    }
+    .risk-low { background: #4caf50; }
+    .risk-moderate { background: #ff9800; }
+    .risk-high { background: #f44336; }
+
+    /* APPOINTMENT & MEDICINE ITEMS */
+    .appointment-item, .medicine-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px; border-bottom: 1px solid #ffb6c1;
+    }
+    .appointment-item:last-child, .medicine-item:last-child { border-bottom: none; }
+    .appointment-time { font-weight: bold; color: #ff2d55; }
+    .medicine-checkbox { width: 18px; height: 18px; margin-right: 10px; cursor: pointer; }
+    .medicine-name { flex: 1; }
+    .medicine-time { color: #666; font-size: 12px; }
+    .taken { text-decoration: line-through; color: #888; }
+
+    /* TIPS */
+    .tip-card {
+      background: #e8f5e9; padding: 15px; border-radius: 15px; margin: 10px 0;
+      border-left: 5px solid #4caf50;
+    }
+    body.dark .tip-card { background: #1e3a2a; }
+
+    .row { display: flex; gap: 30px; flex-wrap: wrap; }
+    .col { flex: 1 1 260px; }
+    label { font-weight: 600; color: #3f3f3f; display: block; margin-top: 10px; font-size: 14px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 14px; margin: 5px 0 10px; border-radius: 30px;
+      border: 2px solid #ffc0cb; background: #fffbfc; font-size: 14px;
+    }
+    textarea { border-radius: 15px; resize: vertical; }
+    button.action {
+      width: 100%; padding: 12px; margin-top: 8px; border: none; background: #ff2d55;
+      color: white; font-weight: bold; font-size: 14px; border-radius: 30px; cursor: pointer;
+      box-shadow: 0 4px 0 #b22234;
+    }
+    button.action:active { transform: translateY(3px); box-shadow: 0 1px 0 #b22234; }
+    button.small-action {
+      padding: 8px 15px; background: #ff2d55; color: white; border: none;
+      border-radius: 20px; cursor: pointer; margin: 5px;
+    }
+
+    /* STATS CARDS */
+    .stats-container {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #ff2d55, #c2185b); color: white; padding: 20px; border-radius: 20px;
+      text-align: center;
+    }
+    .stat-card .stat-value { font-size: 28px; font-weight: bold; }
+    .stat-card .stat-label { font-size: 14px; opacity: 0.9; }
+
+    /* REFERENCE TABLE */
+    .ref-table {
+      width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 13px;
+    }
+    .ref-table th { background: #c2185b; color: white; padding: 8px; }
+    .ref-table td { padding: 6px; border: 1px solid #ffb6c1; }
+
+    table {
+      width: 100%; border-collapse: collapse; margin-top: 20px; border-radius: 20px; overflow: hidden;
+    }
+    th { background: #c2185b; color: white; padding: 12px; }
+    td { padding: 10px; border-bottom: 1px solid #ffd9e2; background: white; }
+    body.dark td { background: #2a2a2a; }
+
+    #gaugeCanvas, #ecgCanvas { display: block; margin: 10px auto; background: #0a0f0f; border-radius: 20px; }
+    #hr { text-align: center; color: #ff2d55; font-size: 2.5rem; }
+    #searchBox { width: 240px; display: inline-block; margin-right: 12px; }
+    .clinical-note { background: #e3f2fd; padding: 15px; border-radius: 15px; margin: 15px 0; border-left: 5px solid #2196f3; }
+    body.dark .clinical-note { background: #1a3a4a; }
+    
+    /* Analytics chart container */
+    .chart-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      padding: 20px;
+      min-height: 500px;
+    }
+    #analyticsChart {
+      max-width: 500px;
+      max-height: 500px;
+      width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <div class="hearts-container" id="heartContainer"></div>
+  <div class="quote-banner">
+    🫀❤️"Every heartbeat is a reminder: you are stronger than you think."❤️🫀
+    <div class="quote-author">— Heart Hub Hospital</div>
+  </div>
+  <div class="login-card">
+    <h2>Heart Hub Hospital🫀</h2>
+    <input type="text" id="user" placeholder="Enter Username" value="">
+    <input type="password" id="pass" placeholder="Enter Password" value="">
+    <label class="show-password"><input type="checkbox" onclick="togglePassword()"> Show Password</label>
+    <button onclick="login()">Login to your heart journey</button>
+    <p id="loginMsg"></p>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="app">
+  <div class="container">
+    <div class="sidebar">
+      <h2>Heart Hub🫀</h2>
+      <button onclick="showPage('dashboard')">📊 Main Dashboard</button>
+      <button onclick="showPage('patients')">📋 Patients (200)</button>
+      <button onclick="showPage('appointments')">📅 Today's Schedule</button>
+      <button onclick="showPage('medicines')">💊 Medicine Reminder</button>
+      <button onclick="showPage('tips')">💡 Personalized Tips</button>
+      <button onclick="showPage('analytics')">📈 Analytics</button>
+      <button onclick="toggleTheme()">🌙 Dark Mode</button>
+      <button onclick="logout()">🚪 Logout</button>
+    </div>
+
+    <div class="main">
+      <!-- DASHBOARD (Main) -->
+      <div id="dashboard" class="panel">
+        <h2>📊 Clinical Risk Assessment</h2>
+        
+        <!-- Clinical Reference Table -->
+        <div class="clinical-note">
+          <h4>📋 Clinical Guidelines for Heart Disease Risk</h4>
+          <table class="ref-table">
+            <tr><th>Factor</th><th>🟢 Low Risk</th><th>🟡 Moderate Risk</th><th>🔴 High Risk</th></tr>
+            <tr><td>BMI</td><td>18.5 – 24.9</td><td>25 – 29.9</td><td>≥ 30</td></tr>
+            <tr><td>Blood Pressure</td><td>&lt; 120/80</td><td>120–139 / 80–89</td><td>≥ 140/90</td></tr>
+            <tr><td>Cholesterol</td><td>&lt; 200</td><td>200–239</td><td>≥ 240</td></tr>
+            <tr><td>Blood Sugar</td><td>&lt; 100</td><td>100–125</td><td>≥ 126</td></tr>
+          </table>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-container">
+          <div class="stat-card"><div class="stat-value" id="totalPatients">200</div><div class="stat-label">Total Patients</div></div>
+          <div class="stat-card"><div class="stat-value" id="highRiskCount">0</div><div class="stat-label">High Risk</div></div>
+          <div class="stat-card"><div class="stat-value" id="todayAppointments">5</div><div class="stat-label">Today's Appts</div></div>
+          <div class="stat-card"><div class="stat-value" id="pendingMeds">3</div><div class="stat-label">Medicines Today</div></div>
+        </div>
+
+        <!-- Main Prediction Form - Removed Patient ID -->
+        <div style="margin-top:20px;">
+          <h3>❤️ Patient Clinical Assessment</h3>
+          <div class="row">
+            <div class="col">
+              <label>Patient Number</label><input id="patientNumber" placeholder="e.g. 1" value="1">
+              <label>Full Name</label><input id="name" placeholder="Enter patient name">
+              <label>Age</label><input id="age" type="number" placeholder="e.g. 45">
+              <label>Gender</label><select id="gender"><option value="" disabled selected>Select gender</option><option>Male</option><option>Female</option></select>
+            </div>
+            <div class="col">
+              <label>Weight (kg)</label><input id="weight" type="number" step="0.1" placeholder="e.g. 70">
+              <label>Height (cm)</label><input id="height" type="number" step="0.1" placeholder="e.g. 170">
+              <label>Blood Pressure (Systolic)</label><input id="bp_sys" type="number" placeholder="e.g. 120">
+              <label>Blood Pressure (Diastolic)</label><input id="bp_dia" type="number" placeholder="e.g. 80">
+            </div>
+            <div class="col">
+              <label>Total Cholesterol (mg/dL)</label><input id="chol" type="number" placeholder="e.g. 200">
+              <label>Fasting Blood Sugar (mg/dL)</label><input id="sugar" type="number" placeholder="e.g. 95">
+              <label>Smoking</label><select id="smoking"><option value="0">No</option><option value="1">Yes</option></select>
+              <label>Family History</label><select id="family"><option value="0">No</option><option value="1">Yes</option></select>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="action" onclick="calculateClinicalRisk()">🩺 Calculate Clinical Risk</button>
+            <button class="action" onclick="savePatient()">💾 Save Patient</button>
+            <button class="action" onclick="downloadPDF()">📄 Download Report</button>
+          </div>
+
+          <!-- Risk Result Display -->
+          <div id="clinicalResult" style="margin: 30px 0; text-align: center;">
+            <h3 id="riskTitle" style="color: #666;">Enter patient data and click Calculate</h3>
+            <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-top: 20px;">
+              <div><h4>BMI</h4><div id="bmiValue" style="font-size: 24px;">—</div><div id="bmiRisk" class="risk-badge" style="margin-top:5px;">—</div></div>
+              <div><h4>BP</h4><div id="bpValue" style="font-size: 24px;">—</div><div id="bpRisk" class="risk-badge" style="margin-top:5px;">—</div></div>
+              <div><h4>Cholesterol</h4><div id="cholValue" style="font-size: 24px;">—</div><div id="cholRisk" class="risk-badge" style="margin-top:5px;">—</div></div>
+              <div><h4>Blood Sugar</h4><div id="sugarValue" style="font-size: 24px;">—</div><div id="sugarRisk" class="risk-badge" style="margin-top:5px;">—</div></div>
+            </div>
+            <div style="margin-top: 30px; padding: 20px; background: #fff0f3; border-radius: 20px;">
+              <h2 id="overallRisk" style="color: #ff2d55;">Overall Risk: Not Calculated</h2>
+              <p id="riskExplanation" style="font-size: 16px;"></p>
+            </div>
+          </div>
+
+          <!-- Visualizations -->
+          <div style="display:flex; justify-content:center; gap:30px; flex-wrap:wrap; margin-top:30px;">
+            <canvas id="gaugeCanvas" width="180" height="180"></canvas>
+            <canvas id="ecgCanvas" width="380" height="90"></canvas>
+          </div>
+          <h4 style="text-align:center; margin-top:20px;">Heart Rate</h4>
+          <h1 id="hr">72 BPM</h1>
+        </div>
+      </div>
+
+      <!-- PATIENTS PAGE (200 patients) - Updated with numbers instead of IDs -->
+      <div id="patients" class="panel" style="display: none;">
+        <h3>📋 Patient Database (200 Records)</h3>
+        <input id="searchBox" placeholder="Search by name...">
+        <button class="action" onclick="searchPatient()" style="width:auto; display:inline-block;">🔍 Search</button>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th>BMI</th><th>BP</th><th>Chol</th><th>Sugar</th><th>Risk</th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- APPOINTMENTS PAGE (Today's Schedule) -->
+      <div id="appointments" class="panel" style="display: none;">
+        <h3>📅 Today's Schedule</h3>
+        <div class="row">
+          <div class="col">
+            <label>Patient Name</label><input id="apptName" placeholder="Enter name">
+            <label>Time</label><input id="apptTime" type="time">
+            <label>Reason</label><input id="apptReason" placeholder="e.g., Checkup">
+            <button class="action" onclick="addAppointment()">Add to Schedule</button>
+          </div>
+          <div class="col">
+            <h4>Today's Appointments</h4>
+            <div id="appointmentsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDICINE REMINDER PAGE -->
+      <div id="medicines" class="panel" style="display: none;">
+        <h3>💊 Medicine Reminder</h3>
+        <div class="row">
+          <div class="col">
+            <label>Medicine Name</label><input id="medName" placeholder="e.g., Aspirin">
+            <label>Dosage</label><input id="medDosage" placeholder="e.g., 1 tablet">
+            <label>Time</label><input id="medTime" type="time">
+            <button class="action" onclick="addMedicine()">Add Medicine</button>
+          </div>
+          <div class="col">
+            <h4>Today's Medicines</h4>
+            <div id="medicinesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HEALTH TIPS PAGE (Personalized) -->
+      <div id="tips" class="panel" style="display: none;">
+        <h3>💡 Personalized Health Tips</h3>
+        <div class="row">
+          <div class="col">
+            <h4>Based on Your Health Data</h4>
+            <div id="personalizedTip" class="tip-card">Enter your health data on the dashboard to get personalized tips.</div>
+            <button class="small-action" onclick="generatePersonalizedTip()">🔄 Generate Tip</button>
+          </div>
+          <div class="col">
+            <h4>Tip Library</h4>
+            <div id="tipsList" style="max-height: 300px; overflow-y: auto;"></div>
+            <textarea id="newTip" rows="2" placeholder="Add new tip..."></textarea>
+            <button class="action" onclick="addTip()">Add Tip</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS PAGE - Fixed chart -->
+      <div id="analytics" class="panel" style="display: none;">
+        <h3>📊 Risk Distribution Analytics (200 Patients)</h3>
+        <div class="chart-container">
+          <canvas id="analyticsChart" width="500" height="500"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- GLOBAL VARIABLES ----------
+  let patientsData = [];
+  let analyticsChart = null;
+  
+  // Appointments data (today's schedule)
+  let appointments = [
+    { name: 'John Doe', time: '10:30', reason: 'Checkup' },
+    { name: 'Mary Smith', time: '14:00', reason: 'Follow-up' },
+    { name: 'Robert Brown', time: '09:15', reason: 'Consultation' },
+    { name: 'Emily Davis', time: '11:45', reason: 'Blood Test' },
+    { name: 'Michael Wilson', time: '16:30', reason: 'Stress Test' }
+  ];
+  
+  // Medicines data
+  let medicines = [
+    { name: 'Aspirin', dosage: '1 tablet', time: '08:00', taken: false },
+    { name: 'Metformin', dosage: '500mg', time: '13:00', taken: false },
+    { name: 'Lisinopril', dosage: '10mg', time: '20:00', taken: false },
+    { name: 'Ibuprofen', dosage: '400mg', time: '09:30', taken: false },
+    { name: 'Amoxicillin', dosage: '500mg', time: '14:00', taken: false },
+    { name: 'Omeprazole', dosage: '20mg', time: '07:00', taken: false },
+    { name: 'Levothyroxine', dosage: '75mcg', time: '06:30', taken: false },
+    { name: 'Atorvastatin', dosage: '20mg', time: '21:00', taken: false },
+    { name: 'Sertraline', dosage: '50mg', time: '08:30', taken: false },
+    { name: 'Albuterol', dosage: '2 puffs', time: '12:00', taken: false },
+    { name: 'Gabapentin', dosage: '300mg', time: '22:00', taken: false },
+    { name: 'Losartan', dosage: '50mg', time: '19:00', taken: false },
+    { name: 'Vitamin D3', dosage: '1000 IU', time: '10:00', taken: false }
+  ];
+  
+  // Health tips library
+  let tips = [
+    'Walking 30 minutes daily reduces heart disease risk by 35%.',
+    'Eating fish twice a week lowers heart disease risk.',
+    'Meditation for 10 minutes daily reduces blood pressure.',
+    'Limit salt intake to prevent hypertension.',
+    'Get 7-8 hours of sleep for heart health.',
+    'Drink 8 glasses of water daily for heart health.',
+    'Reduce stress with deep breathing exercises.',
+    'Eat more fiber to lower cholesterol.',
+    'Avoid smoking and limit alcohol.',
+    'Regular checkups can prevent heart disease.',
+    'Maintain a healthy BMI between 18.5 and 24.9.',
+    'Keep blood pressure below 120/80.',
+    'Monitor cholesterol levels regularly.',
+    'Control blood sugar to prevent diabetes.',
+    'Exercise at least 150 minutes per week.'
+  ];
+
+  // ---------- FLYING HEARTS ----------
+  function createHeart() {
+    const heart = document.createElement('div');
+    heart.className = 'heart'; heart.innerHTML = '🫀';
+    heart.style.left = Math.random() * 100 + '%';
+    heart.style.fontSize = (15 + Math.random() * 30) + 'px';
+    heart.style.animationDuration = (5 + Math.random() * 6) + 's';
+    document.getElementById('heartContainer').appendChild(heart);
+    setTimeout(() => heart.remove(), 9000);
+  }
+  setInterval(createHeart, 350);
+
+  // ---------- PASSWORD TOGGLE ----------
+  window.togglePassword = function() {
+    const pass = document.getElementById('pass');
+    pass.type = pass.type === 'password' ? 'text' : 'password';
+  };
+
+  // ---------- LOGIN ----------
+  window.login = function() {
+    const username = document.getElementById('user').value;
+    const password = document.getElementById('pass').value;
+    
+    if (username === 'Kavya' && password === '1011') {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      build200Patients();
+      renderTable();
+      updateStats();
+      renderAppointments();
+      renderMedicines();
+      renderTips();
+      showPage('dashboard');
+    } else {
+      document.getElementById('loginMsg').innerText = 'Invalid credentials. Use Username: Kavya, Password: 1011';
+    }
+  };
+
+  window.logout = function() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('user').value = '';
+    document.getElementById('pass').value = '';
+  };
+
+  window.toggleTheme = function() { document.body.classList.toggle('dark'); };
+
+  window.showPage = function(pageId) {
+    const pages = ['dashboard', 'patients', 'appointments', 'medicines', 'tips', 'analytics'];
+    pages.forEach(page => {
+      const element = document.getElementById(page);
+      if (element) element.style.display = 'none';
+    });
+    const selectedPage = document.getElementById(pageId);
+    if (selectedPage) selectedPage.style.display = 'block';
+    
+    if (pageId === 'analytics') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => buildAnalyticsChart(), 100);
+    }
+    if (pageId === 'appointments') renderAppointments();
+    if (pageId === 'medicines') renderMedicines();
+    if (pageId === 'tips') renderTips();
+  };
+
+  // ---------- CLINICAL RISK FUNCTIONS ----------
+  function calculateBMIRisk(bmi) {
+    if (bmi >= 30) return { level: 'High', class: 'risk-high' };
+    else if (bmi >= 25) return { level: 'Moderate', class: 'risk-moderate' };
+    else return { level: 'Low', class: 'risk-low' };
+  }
+  
+  function calculateBPRisk(sys, dia) {
+    if (sys >= 140 || dia >= 90) return { level: 'High', class: 'risk-high' };
+    else if (sys >= 120 || dia >= 80) return { level: 'Moderate', class: 'risk-moderate' };
+    else return { level: 'Low', class: 'risk-low' };
+  }
+  
+  function calculateCholesterolRisk(chol) {
+    if (chol >= 240) return { level: 'High', class: 'risk-high' };
+    else if (chol >= 200) return { level: 'Moderate', class: 'risk-moderate' };
+    else return { level: 'Low', class: 'risk-low' };
+  }
+  
+  function calculateSugarRisk(sugar) {
+    if (sugar >= 126) return { level: 'High', class: 'risk-high' };
+    else if (sugar >= 100) return { level: 'Moderate', class: 'risk-moderate' };
+    else return { level: 'Low', class: 'risk-low' };
+  }
+  
+  function getOverallRisk(bmiRisk, bpRisk, cholRisk, sugarRisk) {
+    const levels = [bmiRisk.level, bpRisk.level, cholRisk.level, sugarRisk.level];
+    if (levels.includes('High')) return { level: 'High', class: 'risk-high' };
+    if (levels.includes('Moderate')) return { level: 'Moderate', class: 'risk-moderate' };
+    return { level: 'Low', class: 'risk-low' };
+  }
+
+  // ---------- BUILD 200 PATIENTS ----------
+  function build200Patients() {
+    patientsData = [];
+    const firstNames = ['James','Mary','John','Patricia','Robert','Jennifer','Michael','Linda','William','Elizabeth','David','Barbara','Richard','Susan','Joseph','Jessica','Thomas','Sarah','Charles','Karen','Christopher','Nancy','Daniel','Lisa','Matthew','Betty','Anthony','Margaret','Donald','Sandra','Mark','Ashley','Paul','Kimberly','Steven','Emily','Andrew','Donna','Kenneth','Michelle','Brian','Carol','George','Ruth','Timothy','Sharon','Ronald','Kathleen','Jason','Deborah','Emma','Jacob','Olivia','Michael','Sophia','Ethan','Isabella','Alexander','Mia','Benjamin','Charlotte','Elijah','Amelia','Logan','Harper','Aiden','Evelyn','Lucas','Abigail','Mason','Emily','Carter','Elizabeth','James','Sofia','William','Avery','Henry','Ella'];
+    const lastNames = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez','Gonzalez','Wilson','Anderson','Thomas','Taylor','Moore','Jackson','Martin','Lee','Perez','Thompson','White','Harris','Sanchez','Clark','Ramirez','Lewis','Robinson','Walker','Young','Allen','King','Wright','Scott','Torres','Nguyen','Hill','Flores','Green','Adams','Nelson','Baker','Hall','Rivera','Campbell','Mitchell','Carter','Roberts','Turner','Phillips','Evans','Collins','Stewart','Sanchez','Morris','Rogers','Reed','Cook','Morgan','Bell','Murphy','Bailey','Rivera','Cooper','Richardson','Cox','Howard','Ward','Torres','Peterson','Gray','Ramirez','James','Watson','Brooks','Kelly','Sanders','Price','Bennett','Wood','Barnes','Ross','Henderson','Coleman','Jenkins','Perry','Powell','Long','Patterson','Hughes','Flores','Washington','Butler','Simmons','Foster','Gonzales','Bryant','Alexander','Russell','Griffin','Diaz','Hayes'];
+    
+    for (let i = 0; i < 200; i++) {
+      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const fullName = firstName + ' ' + lastName;
+      const age = 20 + Math.floor(Math.random() * 60);
+      const gender = Math.random() > 0.5 ? 'Male' : 'Female';
+      
+      const weight = 50 + Math.random() * 50;
+      const height = 1.50 + Math.random() * 0.40;
+      const bmi = parseFloat((weight / (height * height)).toFixed(1));
+      const bpSys = 100 + Math.floor(Math.random() * 60);
+      const bpDia = 60 + Math.floor(Math.random() * 40);
+      const chol = 150 + Math.floor(Math.random() * 150);
+      const sugar = 80 + Math.floor(Math.random() * 100);
+      
+      const bmiRisk = calculateBMIRisk(bmi);
+      const bpRisk = calculateBPRisk(bpSys, bpDia);
+      const cholRisk = calculateCholesterolRisk(chol);
+      const sugarRisk = calculateSugarRisk(sugar);
+      const overall = getOverallRisk(bmiRisk, bpRisk, cholRisk, sugarRisk);
+
+      patientsData.push({
+        number: i + 1,
+        name: fullName,
+        age: age,
+        gender: gender,
+        bmi: bmi,
+        bp: `${bpSys}/${bpDia}`,
+        chol: chol,
+        sugar: sugar,
+        riskLevel: overall.level,
+        riskClass: overall.class
+      });
+    }
+  }
+
+  window.calculateClinicalRisk = function() {
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value) / 100;
+    const bpSys = parseFloat(document.getElementById('bp_sys').value);
+    const bpDia = parseFloat(document.getElementById('bp_dia').value);
+    const chol = parseFloat(document.getElementById('chol').value);
+    const sugar = parseFloat(document.getElementById('sugar').value);
+
+    if (!weight || !height || !bpSys || !bpDia || !chol || !sugar) {
+      alert('Please fill all clinical fields');
+      return;
+    }
+
+    const bmi = (weight / (height * height)).toFixed(1);
+    document.getElementById('bmiValue').innerText = bmi;
+    
+    const bmiRisk = calculateBMIRisk(parseFloat(bmi));
+    const bpRisk = calculateBPRisk(bpSys, bpDia);
+    const cholRisk = calculateCholesterolRisk(chol);
+    const sugarRisk = calculateSugarRisk(sugar);
+
+    document.getElementById('bmiRisk').innerText = bmiRisk.level;
+    document.getElementById('bmiRisk').className = `risk-badge ${bmiRisk.class}`;
+    document.getElementById('bpValue').innerText = `${bpSys}/${bpDia}`;
+    document.getElementById('bpRisk').innerText = bpRisk.level;
+    document.getElementById('bpRisk').className = `risk-badge ${bpRisk.class}`;
+    document.getElementById('cholValue').innerText = chol;
+    document.getElementById('cholRisk').innerText = cholRisk.level;
+    document.getElementById('cholRisk').className = `risk-badge ${cholRisk.class}`;
+    document.getElementById('sugarValue').innerText = sugar;
+    document.getElementById('sugarRisk').innerText = sugarRisk.level;
+    document.getElementById('sugarRisk').className = `risk-badge ${sugarRisk.class}`;
+
+    const overall = getOverallRisk(bmiRisk, bpRisk, cholRisk, sugarRisk);
+    document.getElementById('overallRisk').innerHTML = `Overall Risk: <span style="color:${overall.class === 'risk-high' ? '#f44336' : (overall.class === 'risk-moderate' ? '#ff9800' : '#4caf50')}">${overall.level}</span>`;
+    
+    let explanation = '';
+    if (overall.level === 'High') explanation = '⚠️ Immediate attention needed. Multiple factors in high risk zone.';
+    else if (overall.level === 'Moderate') explanation = '⚠️ Moderate risk. Lifestyle changes recommended.';
+    else explanation = '✅ Low risk. Keep up healthy habits!';
+    document.getElementById('riskExplanation').innerText = explanation;
+
+    let percent = overall.level === 'High' ? 85 : (overall.level === 'Moderate' ? 45 : 15);
+    drawGauge(percent);
+  };
+
+  function drawGauge(percent) {
+    const canvas = document.getElementById('gaugeCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 180, 180);
+    ctx.beginPath(); ctx.arc(90, 90, 70, 0, 2 * Math.PI); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 18; ctx.stroke();
+    ctx.beginPath(); ctx.arc(90, 90, 70, -Math.PI/2, -Math.PI/2 + (percent/100) * 2 * Math.PI);
+    ctx.strokeStyle = '#ff2d55'; ctx.lineWidth = 18; ctx.stroke();
+  }
+
+  // ---------- RENDER FUNCTIONS ----------
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    patientsData.forEach(p => {
+      const row = tbody.insertRow();
+      row.insertCell(0).innerText = p.number;
+      row.insertCell(1).innerText = p.name;
+      row.insertCell(2).innerText = p.age;
+      row.insertCell(3).innerText = p.gender;
+      row.insertCell(4).innerText = p.bmi;
+      row.insertCell(5).innerText = p.bp;
+      row.insertCell(6).innerText = p.chol;
+      row.insertCell(7).innerText = p.sugar;
+      row.insertCell(8).innerHTML = `<span class="risk-badge ${p.riskClass}">${p.riskLevel}</span>`;
+    });
+  }
+
+  function updateStats() {
+    let high = 0;
+    patientsData.forEach(p => {
+      if (p.riskLevel === 'High') high++;
+    });
+    document.getElementById('totalPatients').innerText = patientsData.length;
+    document.getElementById('highRiskCount').innerText = high;
+  }
+
+  // ---------- ANALYTICS CHART - FIXED ----------
+  function buildAnalyticsChart() {
+    if (!patientsData || patientsData.length === 0) {
+      console.log('No patient data available');
+      return;
+    }
+    
+    let low = 0, moderate = 0, high = 0;
+    patientsData.forEach(p => {
+      if (p.riskLevel === 'High') high++;
+      else if (p.riskLevel === 'Moderate') moderate++;
+      else if (p.riskLevel === 'Low') low++;
+    });
+
+    console.log(`Risk counts - Low: ${low}, Moderate: ${moderate}, High: ${high}`);
+
+    const canvas = document.getElementById('analyticsChart');
+    if (!canvas) {
+      console.log('Canvas element not found');
+      return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (analyticsChart) {
+      analyticsChart.destroy();
+    }
+    
+    analyticsChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ['Low Risk', 'Moderate Risk', 'High Risk'],
+        datasets: [{
+          data: [low, moderate, high],
+          backgroundColor: ['#4caf50', '#ff9800', '#f44336'],
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: {
+                size: 14
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.raw || 0;
+                const total = low + moderate + high;
+                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ---------- APPOINTMENTS ----------
+  window.addAppointment = function() {
+    const name = document.getElementById('apptName').value;
+    const time = document.getElementById('apptTime').value;
+    const reason = document.getElementById('apptReason').value;
+    if (name && time) {
+      appointments.push({ name, time, reason });
+      renderAppointments();
+      document.getElementById('apptName').value = '';
+      document.getElementById('apptTime').value = '';
+      document.getElementById('apptReason').value = '';
+      document.getElementById('todayAppointments').innerText = appointments.length;
+    }
+  };
+
+  function renderAppointments() {
+    const list = document.getElementById('appointmentsList');
+    if (!list) return;
+    list.innerHTML = '';
+    appointments.forEach(a => {
+      list.innerHTML += `<div class="appointment-item">
+        <span><strong>${a.name}</strong> ${a.reason ? '- ' + a.reason : ''}</span>
+        <span class="appointment-time">${a.time}</span>
+      </div>`;
+    });
+    document.getElementById('todayAppointments').innerText = appointments.length;
+  }
+
+  // ---------- MEDICINE REMINDER ----------
+  window.addMedicine = function() {
+    const name = document.getElementById('medName').value;
+    const dosage = document.getElementById('medDosage').value;
+    const time = document.getElementById('medTime').value;
+    if (name && time) {
+      medicines.push({ name, dosage, time, taken: false });
+      renderMedicines();
+      document.getElementById('medName').value = '';
+      document.getElementById('medDosage').value = '';
+      document.getElementById('medTime').value = '';
+    }
+  };
+
+  window.toggleMedicine = function(index) {
+    medicines[index].taken = !medicines[index].taken;
+    renderMedicines();
+  };
+
+  function renderMedicines() {
+    const list = document.getElementById('medicinesList');
+    if (!list) return;
+    list.innerHTML = '';
+    medicines.forEach((m, index) => {
+      list.innerHTML += `<div class="medicine-item">
+        <input type="checkbox" class="medicine-checkbox" onchange="toggleMedicine(${index})" ${m.taken ? 'checked' : ''}>
+        <span class="medicine-name ${m.taken ? 'taken' : ''}">${m.name} (${m.dosage})</span>
+        <span class="medicine-time">${m.time}</span>
+      </div>`;
+    });
+    document.getElementById('pendingMeds').innerText = medicines.filter(m => !m.taken).length;
+  }
+
+  // ---------- PERSONALIZED HEALTH TIPS ----------
+  window.generatePersonalizedTip = function() {
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value) / 100;
+    const bpSys = parseFloat(document.getElementById('bp_sys').value);
+    const chol = parseFloat(document.getElementById('chol').value);
+    const sugar = parseFloat(document.getElementById('sugar').value);
+    
+    let tip = '';
+    
+    if (weight && height) {
+      const bmi = weight / (height * height);
+      if (bmi >= 30) tip += '⚠️ Your BMI indicates obesity. Consider a weight management program. ';
+      else if (bmi >= 25) tip += '⚠️ You are overweight. Try to increase physical activity. ';
+      else tip += '✅ Your BMI is healthy. Keep it up! ';
+    }
+    
+    if (bpSys) {
+      if (bpSys >= 140) tip += '⚠️ Your blood pressure is high. Reduce salt intake and stress. ';
+      else if (bpSys >= 120) tip += '⚠️ Your blood pressure is elevated. Monitor regularly. ';
+      else tip += '✅ Your blood pressure is excellent. ';
+    }
+    
+    if (chol) {
+      if (chol >= 240) tip += '⚠️ Your cholesterol is high. Eat more fiber and healthy fats. ';
+      else if (chol >= 200) tip += '⚠️ Your cholesterol is borderline. Consider dietary changes. ';
+      else tip += '✅ Your cholesterol is ideal. ';
+    }
+    
+    if (sugar) {
+      if (sugar >= 126) tip += '⚠️ Your blood sugar is high. Limit sugar and carbs. ';
+      else if (sugar >= 100) tip += '⚠️ Your blood sugar is elevated. Avoid sugary drinks. ';
+      else tip += '✅ Your blood sugar is normal. ';
+    }
+    
+    if (!tip) tip = 'Enter your health data above to get personalized tips.';
+    
+    document.getElementById('personalizedTip').innerHTML = tip;
+  };
+
+  window.addTip = function() {
+    const newTip = document.getElementById('newTip').value;
+    if (newTip) {
+      tips.push(newTip);
+      renderTips();
+      document.getElementById('newTip').value = '';
+    }
+  };
+
+  function renderTips() {
+    const list = document.getElementById('tipsList');
+    if (!list) return;
+    list.innerHTML = '';
+    tips.slice(0, 10).forEach(t => {
+      list.innerHTML += `<div class="tip-card">${t}</div>`;
+    });
+  }
+
+  // ---------- SEARCH PATIENTS ----------
+  window.searchPatient = function() {
+    const keyword = document.getElementById('searchBox').value.toLowerCase();
+    const rows = document.getElementById('tableBody').rows;
+    for (let i = 0; i < rows.length; i++) {
+      const name = rows[i].cells[1].innerText.toLowerCase();
+      rows[i].style.display = name.includes(keyword) ? '' : 'none';
+    }
+  };
+
+  window.savePatient = function() {
+    const name = document.getElementById('name').value;
+    const age = document.getElementById('age').value;
+    const gender = document.getElementById('gender').value;
+    const weight = document.getElementById('weight').value;
+    const height = document.getElementById('height').value;
+    const bpSys = document.getElementById('bp_sys').value;
+    const bpDia = document.getElementById('bp_dia').value;
+    const chol = document.getElementById('chol').value;
+    const sugar = document.getElementById('sugar').value;
+
+    if (!name || !age || !weight || !height || !bpSys || !bpDia || !chol || !sugar) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    const bmi = parseFloat((weight / ((height/100) * (height/100))).toFixed(1));
+    const bmiRisk = calculateBMIRisk(bmi);
+    const bpRisk = calculateBPRisk(parseFloat(bpSys), parseFloat(bpDia));
+    const cholRisk = calculateCholesterolRisk(parseFloat(chol));
+    const sugarRisk = calculateSugarRisk(parseFloat(sugar));
+    const overall = getOverallRisk(bmiRisk, bpRisk, cholRisk, sugarRisk);
+
+    patientsData.push({
+      number: patientsData.length + 1,
+      name, age, gender,
+      bmi: bmi,
+      bp: `${bpSys}/${bpDia}`,
+      chol, sugar,
+      riskLevel: overall.level,
+      riskClass: overall.class
+    });
+
+    renderTable();
+    updateStats();
+    alert('Patient saved!');
+  };
+
+  window.downloadPDF = function() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+    pdf.text('Heart Hub Clinical Report', 70, 20);
+    pdf.text('Patient: ' + (document.getElementById('name').value || 'N/A'), 20, 50);
+    pdf.text('Age: ' + (document.getElementById('age').value || 'N/A'), 20, 60);
+    pdf.text('Overall Risk: ' + document.getElementById('overallRisk').innerText, 20, 80);
+    pdf.save('Clinical_Report.pdf');
+  };
+
+  // ECG Simulation
+  const ecgCanvas = document.getElementById('ecgCanvas');
+  if (ecgCanvas) {
+    const ecgCtx = ecgCanvas.getContext('2d');
+    let phase = 0;
+    setInterval(() => {
+      if (!ecgCtx) return;
+      ecgCtx.clearRect(0, 0, 380, 90);
+      ecgCtx.beginPath(); 
+      ecgCtx.strokeStyle = '#00ff9c';
+      ecgCtx.lineWidth = 2;
+      for (let x = 0; x < 380; x++) {
+        let y = 45 + Math.sin((x + phase) / 9) * 5;
+        if (x % 110 > 20 && x % 110 < 28) y = 20;
+        if (x % 110 > 28 && x % 110 < 36) y = 75;
+        if (x === 0) ecgCtx.moveTo(x, y);
+        else ecgCtx.lineTo(x, y);
+      }
+      ecgCtx.stroke(); 
+      phase += 5;
+    }, 70);
+  }
+
+  // Heart Rate Animation
+  setInterval(() => {
+    const hrEl = document.getElementById('hr');
+    if (hrEl) hrEl.innerText = (58 + Math.floor(Math.random() * 38)) + ' BPM';
+  }, 2300);
+
+  // Initialize
+  window.onload = function() {
+    build200Patients();
+    renderTable();
+    updateStats();
+    renderAppointments();
+    renderMedicines();
+    renderTips();
+  };
+</script>
+</body>
+</html>
